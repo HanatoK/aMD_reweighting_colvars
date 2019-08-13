@@ -1,0 +1,50 @@
+diff -urN NAMD_Git-2019-08-04_Source/src/Controller.C NAMD_Git-2019-08-04_Source_modified/src/Controller.C
+--- NAMD_Git-2019-08-04_Source/src/Controller.C	2019-08-04 14:37:08.000000000 +0800
++++ NAMD_Git-2019-08-04_Source_modified/src/Controller.C	2019-08-05 15:55:33.875174827 +0800
+@@ -1832,7 +1832,10 @@
+     }
+     submit_reduction->submit();
+ 
+-    if (step == simParams->firstTimestep) accelMDdVAverage = 0;
++    if (step == simParams->firstTimestep) {
++        accelMDdVAverage = 0;
++        accelMDdV = 0;
++    }
+ //    if ( minimize || ((step < simParams->accelMDFirstStep ) || (step > simParams->accelMDLastStep ))) return;
+     if ( minimize || (step < simParams->accelMDFirstStep ) || ( simParams->accelMDLastStep > 0 && step > simParams->accelMDLastStep )) return;
+ 
+@@ -2212,7 +2215,9 @@
+     accelMDfactor[1]=factor_tot;
+     accelMDfactor[2]=1;
+     broadcast->accelMDRescaleFactor.publish(step,accelMDfactor);
+-    virial_amd = vir; 
++    virial_amd = vir;
++    accelMDdV = dV;
++//     std::cout << "Step: " << step << " accelMD dV in controller: " << accelMDdV << std::endl;
+ 
+     if ( factor_tot < 0.001 ) {
+        iout << iWARN << "accelMD is using a very high boost potential, simulation may become unstable!"
+diff -urN NAMD_Git-2019-08-04_Source/src/Controller.h NAMD_Git-2019-08-04_Source_modified/src/Controller.h
+--- NAMD_Git-2019-08-04_Source/src/Controller.h	2019-08-04 14:37:08.000000000 +0800
++++ NAMD_Git-2019-08-04_Source_modified/src/Controller.h	2019-08-05 15:31:17.967848529 +0800
+@@ -47,6 +47,7 @@
+ #ifdef MEASURE_NAMD_WITH_PAPI
+ 	void resumeAfterPapiMeasureBarrier(int step);
+ #endif
++    BigReal accelMDdV;
+ 
+ protected:
+     friend class ScriptTcl;
+diff -urN NAMD_Git-2019-08-04_Source/src/NamdState.h NAMD_Git-2019-08-04_Source_modified/src/NamdState.h
+--- NAMD_Git-2019-08-04_Source/src/NamdState.h	2019-08-04 14:37:08.000000000 +0800
++++ NAMD_Git-2019-08-04_Source_modified/src/NamdState.h	2019-08-05 15:38:42.185745257 +0800
+@@ -48,6 +48,9 @@
+     int status();
+     void useController(Controller *controllerPtr);
+     void runController(void);
++    const Controller& getController() const {
++        return (*controller);
++    }
+ };
+ 
+ #endif /* _NAMDSTATE_H */
